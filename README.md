@@ -182,37 +182,87 @@ color-ssh() {
 alias ssh=color-ssh
 
 # Misc aliases
-alias c="clear"
-alias mux="tmuxinator"
 alias ls='ls -GFh --color=auto'
 alias prettyjson='python -m json.tool'
 
 # Docker aliases
 alias docker-commands='docker inspect -f "{{.Name}} {{.Config.Cmd}}" $(docker ps -a -q)'
+alias docker-cleanup="docker ps -a | grep Exited | awk {'print $1'} | xargs docker rm"
 
 alias php7='docker run --rm \
 -ti \
+-e COMPOSER_HOME \
 -v ${PWD}:/code \
+-e COMPOSER_AUTH \
+-v $COMPOSER_HOME:$COMPOSER_HOME \
+-e COMPOSER_MEMORY_LIMIT=-1 \
+-e SSH_AUTH_SOCK=/ssh-auth.sock \
+-v $SSH_AUTH_SOCK:/ssh-auth.sock \
+-v /etc/passwd:/etc/passwd:ro \
+-v /etc/group:/etc/group:ro \
+-v /home/$USERNAME/.ssh/known_hosts:/home/$USERNAME/.ssh/known_hosts \
+-v /home/$USERNAME/.gitconfig:/home/$USERNAME/.gitconfig \
 --user ${UID}:${GID} \
 --workdir /code \
-php:7.0-cli \
-php '
+[IMAGE]:7.0-dev '
+
+alias php73='docker run --rm \
+-ti \
+-e COMPOSER_HOME \
+-v ${PWD}:/code \
+-e COMPOSER_AUTH \
+-v $COMPOSER_HOME:$COMPOSER_HOME \
+-e COMPOSER_MEMORY_LIMIT=-1 \
+-e SSH_AUTH_SOCK=/ssh-auth.sock \
+-v $SSH_AUTH_SOCK:/ssh-auth.sock \
+-v /etc/passwd:/etc/passwd:ro \
+-v /etc/group:/etc/group:ro \
+-v /home/$USERNAME/.ssh/known_hosts:/home/$USERNAME/.ssh/known_hosts \
+-v /home/$USERNAME/.gitconfig:/home/$USERNAME/.gitconfig \
+--user ${UID}:${GID} \
+--workdir /code \
+[IMAGE]:7.3-dev '
 
 alias phpunit='docker run --rm \
 -ti \
 -v ${PWD}:/code \
 --user ${UID}:${GID} \
 --workdir /code \
-php:7.0-cli \
-php /code/vendor/bin/phpunit'
+[IMAGE]:7.0-dev /code/vendor/bin/phpunit '
 
-alias composer='docker run --rm \
--ti \
--v ${PWD}:/code \
--v ~/.composer:/var/www/.composer \
---user ${UID}:${GID} \
---workdir /code \
-[domain]/tom/php-fpm:7.0-dev composer'
+export COMPOSER_HOME=$HOME/.composer
+export COMPOSER_AUTH=$(cat ~/.composer/auth.json)
+
+phps=("7.0" "7.1" "7.2" "7.3" "7.4")
+
+function composer() {
+  PHP_VERSION='7.0'
+  PS3='select version: '
+
+  select opt in $phps; do
+    if [[ ! -v "phps[$REPLY]" ]] ; then
+      echo "Invalid option"
+      continue
+    else
+      PHP_VERSION=$opt
+      break
+    fi
+  done
+
+  docker run --rm --interactive --tty \
+  --env COMPOSER_HOME \
+  --env SSH_AUTH_SOCK=/ssh-auth.sock \
+  --env COMPOSER_MEMORY_LIMIT=-1 \
+  --env COMPOSER_AUTH=$(cat ~/.composer/auth.json) \
+  --user ${UID}:${GID} \
+  --volume $SSH_AUTH_SOCK:/ssh-auth.sock \
+  --volume /etc/passwd:/etc/passwd:ro \
+  --volume /etc/group:/etc/group:ro \
+  --volume /home/$USERNAME/.ssh/known_hosts:/home/$USERNAME/.ssh/known_hosts \
+  --volume $COMPOSER_HOME:$COMPOSER_HOME \
+  --volume $PWD:/var/www/html \
+  [IMAGE]:$PHP_VERSION-dev composer "$@"
+}
 
 # ------------------------------------------------------------------------------
 # Dependencies
@@ -239,6 +289,13 @@ zplug "plugins/extract", from:oh-my-zsh
 zplug "plugins/ssh-agent", from:oh-my-zsh
 zplug "plugins/autojump", from:oh-my-zsh
 
+# SSH
+zstyle :omz:plugins:ssh-agent agent-forwarding on
+zstyle -a :omz:plugins:ssh-agent identities id_rsa
+zstyle -a :omz:plugins:ssh-agent identities tl_rsa
+zstyle -a :omz:plugins:ssh-agent identities id_rsa_bitbucket
+zstyle :omz:plugins:ssh-agent lifetime 4h
+
 # Zsh improvements
 zplug "zsh-users/zsh-autosuggestions"
 zplug "zsh-users/zsh-syntax-highlighting"
@@ -259,4 +316,5 @@ eval $(thefuck --alias)
 
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+alias lzd='lazydocker'
 ```
