@@ -77,6 +77,13 @@ wget https://github.com/sharkdp/fd/releases/download/v7.3.0/fd_7.3.0_amd64.deb
 dpkg -i fd_7.3.0_amd64.deb
 ```
 
+# Disk Usage/Free Utility
+```
+git clone https://github.com/muesli/duf.git
+cd duf
+go buil
+```
+
 # ZSH stuff
 
 # zsh theme
