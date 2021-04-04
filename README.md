@@ -83,6 +83,10 @@ git clone https://github.com/muesli/duf.git
 cd duf
 go buil
 ```
+# up - the Ultimate Plumber
+```
+https://github.com/akavel/up
+```
 
 # ZSH stuff
 
